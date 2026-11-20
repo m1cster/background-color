@@ -27,10 +27,11 @@ In the desktop app, where `/plugin` does not run: click + next to the prompt box
 ## Configure it
 
 - **Settings pane:** run `/background-color` to open a pane with a swatch, a hex field and presets for each mode, plus an on/off switch.
-- **Command:** `/background-color light #f3efe6` and `/background-color dark #1b1d22` set a color; `/background-color light` (no color) shows the current one; `/background-color reset`, `/background-color on` and `/background-color off` do what they say.
-- **Plugin settings:** the fields `Light mode background`, `Dark mode background` and `Custom background` appear wherever the app lists plugin options, and are stored in `settings.json` under `pluginConfigs["background-color"].options`.
+- **Green screen:** `/background-color green-screen`, or the Green screen button in the pane, makes dark mode look like an old monochrome monitor: P1 phosphor green text (`#33ff33`) on a faintly green black (`#020c02`).
+- **Command:** `/background-color light #f3efe6` and `/background-color dark #1b1d22` set a background; `/background-color dark-text #33ff33` sets a text color and `/background-color dark-text auto` lets text follow the background again (`light-text` likewise); a mode named with no color shows the current one; `/background-color reset`, `/background-color on` and `/background-color off` do what they say.
+- **Plugin settings:** the fields `Light mode background`, `Dark mode background`, `Light mode text`, `Dark mode text` and `Custom background` appear wherever the app lists plugin options, and are stored in `settings.json` under `pluginConfigs["background-color"].options`.
 
-Colors are hex (`#abc` or `#aabbcc`). A blank field uses the mod's default. A color too dark for light mode (or too light for dark mode) to keep text readable is nudged to the nearest one that is, and the pane says so. The terminal draws no themes, so there the mod only stores the settings, which the desktop and mobile apps paint.
+Colors are hex (`#abc` or `#aabbcc`). A blank background uses the mod's default; a blank text color follows the background. A text color you set keeps its hue, and its secondary and muted strengths are darker shades of it. A color too dark for light mode (or too light for dark mode) to keep text readable is nudged to the nearest one that is, and the pane says so. The terminal draws no themes, so there the mod only stores the settings, which the desktop and mobile apps paint.
 
 ## License
 

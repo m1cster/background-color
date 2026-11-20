@@ -34,15 +34,34 @@ const FIELD: Record<Mode, 'lightBackground' | 'darkBackground'> = {
   dark: 'darkBackground',
 }
 
+const TEXT_FIELD: Record<Mode, 'lightText' | 'darkText'> = {
+  light: 'lightText',
+  dark: 'darkText',
+}
+
+/** An old monochrome monitor: P1 phosphor green on a faintly green black. */
+const GREEN_SCREEN = { background: '#020c02', text: '#33ff33' }
+
 // Change the tag when Applied's fields change: it declines what an earlier
 // version stored, which outlives a reload.
 const applied = atom(
   { plugin: 'background-color', key: 'applied' } as const,
-  { light: DEFAULTS.light, dark: DEFAULTS.dark, isEnabled: true, isDrawn: false, isPainting: false, note: '' },
-  { shape: 'applied-2' },
+  {
+    light: DEFAULTS.light,
+    dark: DEFAULTS.dark,
+    lightText: '',
+    darkText: '',
+    isEnabled: true,
+    isDrawn: false,
+    isPainting: false,
+    note: '',
+  },
+  { shape: 'applied-3' },
 )
 
-type Resolved = { light: string; dark: string; isEnabled: boolean; notes: string[] }
+type Texts = Record<Mode, string | undefined>
+
+type Resolved = { light: string; dark: string; text: Texts; isEnabled: boolean; notes: string[] }
 
 /** The options as colors to paint: blank means the default, a bad value is noted and replaced. */
 function resolve(options: PluginOptions): Resolved {
@@ -63,18 +82,39 @@ function resolve(options: PluginOptions): Resolved {
 
     return hex
   }
+  // A text color is optional: blank (or "auto") follows the page color.
+  const pickText = (mode: Mode): string | undefined => {
+    const raw = options[TEXT_FIELD[mode]]
 
-  return { light: pick('light'), dark: pick('dark'), isEnabled: options.enabled !== false, notes }
+    if (typeof raw !== 'string' || raw.trim() === '' || raw.trim().toLowerCase() === 'auto') {
+      return undefined
+    }
+    const hex = normalizeHex(raw)
+
+    if (hex === undefined) {
+      notes.push(`"${raw}" isn't a hex color, so ${mode} mode text follows the page color.`)
+    }
+
+    return hex
+  }
+
+  return {
+    light: pick('light'),
+    dark: pick('dark'),
+    text: { light: pickText('light'), dark: pickText('dark') },
+    isEnabled: options.enabled !== false,
+    notes,
+  }
 }
 
-function anchorsSafe(hex: string, mode: Mode) {
-  return { gray: { anchors: anchorsFor(hex, mode) } }
+function anchorsSafe(hex: string, mode: Mode, text: string | undefined) {
+  return { gray: { anchors: anchorsFor(hex, mode, text) } }
 }
 
 /** Whether Desktop paints a mode built on this page color, with the app's own roles. */
-function paints(hex: string, mode: Mode): boolean {
+function paints(hex: string, mode: Mode, text: string | undefined): boolean {
   try {
-    const { problems } = makeColors({ label: 'Check', [mode]: anchorsSafe(hex, mode), only: mode })
+    const { problems } = makeColors({ label: 'Check', [mode]: anchorsSafe(hex, mode, text), only: mode })
 
     return !problems.some(line => line.startsWith("Desktop won't paint"))
   } catch {
@@ -87,11 +127,11 @@ function paints(hex: string, mode: Mode): boolean {
  * toward white (light mode) or black (dark mode) only as far as the text and
  * accents need to stay readable.
  */
-function fit(hex: string, mode: Mode): string {
+function fit(hex: string, mode: Mode, text: string | undefined): string {
   for (let i = 0; i <= 50; i++) {
     const candidate = towardMode(hex, mode, i * 0.02)
 
-    if (paints(candidate, mode)) {
+    if (paints(candidate, mode, text)) {
       return candidate
     }
   }
@@ -99,18 +139,18 @@ function fit(hex: string, mode: Mode): string {
   return DEFAULTS[mode]
 }
 
-/** The whole theme for a light and a dark page color. */
-function lookFor(light: string, dark: string): ThemeSetArgs {
+/** The whole theme for a light and a dark page color, and their text colors where set. */
+function lookFor(light: string, dark: string, text: Texts): ThemeSetArgs {
   const { theme } = makeColors({
     label: 'Custom background',
-    light: anchorsSafe(light, 'light'),
-    dark: anchorsSafe(dark, 'dark'),
+    light: anchorsSafe(light, 'light', text.light),
+    dark: anchorsSafe(dark, 'dark', text.dark),
   })
 
   return { colors: theme }
 }
 
-type Field = 'enabled' | 'lightBackground' | 'darkBackground'
+type Field = 'enabled' | 'lightBackground' | 'darkBackground' | 'lightText' | 'darkText'
 
 /**
  * Paints the theme for these settings and records it for the pane. `isAsked`
@@ -118,7 +158,8 @@ type Field = 'enabled' | 'lightBackground' | 'darkBackground'
  * so a load or a reload never nags.
  */
 async function apply($: EngineInterface, options: PluginOptions, isAsked: boolean): Promise<void> {
-  const { light, dark, isEnabled, notes } = resolve(options)
+  const { light, dark, text, isEnabled, notes } = resolve(options)
+  const texts = { lightText: text.light ?? '', darkText: text.dark ?? '' }
 
   if (!isEnabled) {
     const before = await read($, applied)
@@ -132,6 +173,7 @@ async function apply($: EngineInterface, options: PluginOptions, isAsked: boolea
     await update($, applied, () => ({
       light,
       dark,
+      ...texts,
       isEnabled,
       isDrawn: false,
       isPainting: false,
@@ -141,7 +183,7 @@ async function apply($: EngineInterface, options: PluginOptions, isAsked: boolea
     return
   }
 
-  const page = { light: fit(light, 'light'), dark: fit(dark, 'dark') }
+  const page = { light: fit(light, 'light', text.light), dark: fit(dark, 'dark', text.dark) }
 
   for (const mode of ['light', 'dark'] as const) {
     const asked = mode === 'light' ? light : dark
@@ -155,12 +197,14 @@ async function apply($: EngineInterface, options: PluginOptions, isAsked: boolea
   let look: ThemeSetArgs
 
   try {
-    look = lookFor(page.light, page.dark)
+    look = lookFor(page.light, page.dark, text)
   } catch (error) {
     notes.push(`Those colors couldn't make a theme (${String(error)}), so the defaults are painted.`)
     page.light = DEFAULTS.light
     page.dark = DEFAULTS.dark
-    look = lookFor(page.light, page.dark)
+    texts.lightText = ''
+    texts.darkText = ''
+    look = lookFor(page.light, page.dark, { light: undefined, dark: undefined })
   }
   // A surface that draws no themes (a terminal) is not a problem: the theme
   // stands and a desktop or mobile app that attaches draws it.
@@ -172,6 +216,7 @@ async function apply($: EngineInterface, options: PluginOptions, isAsked: boolea
   await update($, applied, () => ({
     light: page.light,
     dark: page.dark,
+    ...texts,
     isEnabled,
     isDrawn: result.isDrawn,
     isPainting: true,
@@ -242,6 +287,28 @@ async function setColor($: EngineInterface, mode: Mode, input: string): Promise<
   })
 }
 
+async function setText($: EngineInterface, mode: Mode, input: string): Promise<string> {
+  return inTurn(async () => {
+    const isAuto = input.trim() === '' || input.trim().toLowerCase() === 'auto'
+    const hex = isAuto ? '' : normalizeHex(input)
+
+    if (hex === undefined) {
+      return refuse($, `"${input}" isn't a hex color. Try one like ${GREEN_SCREEN.text}, or auto.`)
+    }
+    const deny = await setOption($, TEXT_FIELD[mode], hex)
+
+    if (deny !== undefined) {
+      return refuse($, `Couldn't save the ${mode} text color: ${deny}`)
+    }
+    saved[TEXT_FIELD[mode]] = hex
+    await apply($, saved, true)
+
+    const name = mode === 'light' ? 'Light' : 'Dark'
+
+    return hex === '' ? `${name} mode text follows the page color again.` : `${name} mode text set to ${hex}.`
+  })
+}
+
 async function setEnabled($: EngineInterface, isEnabled: boolean): Promise<string> {
   return inTurn(async () => {
     const deny = await setOption($, 'enabled', isEnabled)
@@ -262,6 +329,9 @@ const HELP = [
   '  /background-color light #f3efe6   set the light mode background',
   '  /background-color dark #1b1d22    set the dark mode background',
   '  /background-color light           show the light mode background',
+  '  /background-color dark-text #33ff33  set the dark mode text color',
+  '  /background-color dark-text auto  text follows the page color again',
+  '  /background-color green-screen    dark mode as an old green monitor',
   '  /background-color reset           both back to the defaults',
   '  /background-color on | off        paint the custom background, or not',
 ].join('\n')
@@ -273,7 +343,7 @@ export const register: Register = (on, options) => {
     await $.command.register({
       name: 'background-color',
       description: 'Set the background color for light and dark mode',
-      argumentHint: '[light|dark <#hex> | reset | on | off]',
+      argumentHint: '[light|dark|light-text|dark-text <#hex> | green-screen | reset | on | off]',
     })
     await apply($, options, false)
 
@@ -304,6 +374,27 @@ export const register: Register = (on, options) => {
         }
 
         return { text: await setColor($, mode, value) }
+      }
+      case 'light-text':
+      case 'dark-text': {
+        const mode = verb.toLowerCase() === 'light-text' ? 'light' : 'dark'
+
+        if (value === '') {
+          const now = await read($, applied)
+          const current = mode === 'light' ? now.lightText : now.darkText
+
+          return {
+            text: `${mode === 'light' ? 'Light' : 'Dark'} mode text is ${current === '' ? 'auto (follows the page color)' : current}.\n${HELP}`,
+          }
+        }
+
+        return { text: await setText($, mode, value) }
+      }
+      case 'green-screen': {
+        const background = await setColor($, 'dark', GREEN_SCREEN.background)
+        const text = await setText($, 'dark', GREEN_SCREEN.text)
+
+        return { text: `${background}\n${text}` }
       }
       case 'reset': {
         const light = await setColor($, 'light', '')
@@ -354,6 +445,28 @@ export const register: Register = (on, options) => {
           ))}
           <Button key={`${mode}-default`} dimColor label="Default" onPress={() => void setColor($, mode, '')} />
         </Box>
+        <Box flexDirection="row" gap={1} alignItems="center">
+          <Input
+            key={`${mode}-text`}
+            label="Text"
+            value={mode === 'light' ? now.lightText : now.darkText}
+            placeholder="auto"
+            submitLabel="apply"
+            onSubmit={value => void setText($, mode, value)}
+          />
+          <Button key={`${mode}-text-auto`} dimColor label="Auto" onPress={() => void setText($, mode, '')} />
+          {mode === 'dark' && (
+            <Button
+              key="green-screen"
+              label="Green screen"
+              variant={now.dark === GREEN_SCREEN.background && now.darkText === GREEN_SCREEN.text ? 'primary' : 'secondary'}
+              onPress={() => {
+                void setColor($, 'dark', GREEN_SCREEN.background)
+                void setText($, 'dark', GREEN_SCREEN.text)
+              }}
+            />
+          )}
+        </Box>
       </Box>
     )
 
@@ -377,7 +490,8 @@ export const register: Register = (on, options) => {
           <Text dimColor>This surface draws no themes; the desktop and mobile apps paint these colors.</Text>
         )}
         <Text dimColor>
-          Type a hex color and press Enter, or pick a preset. Cards, panels and text follow the page color.
+          Type a hex color and press Enter, or pick a preset. Cards and panels follow the page color, and so does
+          text unless you give it a color of its own.
         </Text>
       </Box>
     )

@@ -170,3 +170,30 @@ test('a denied switch says why in the pane', async ($, on) => {
   expect(await ui.find({ type: 'Text', text: /locked by your organization/ })).toBeDefined()
   await ui.unmount()
 })
+
+test('green-screen paints green text on a dark green page', async ($, on) => {
+  const seen = engine(on)
+  await $.session.start(start)
+
+  const ran = await $.command.run(run('green-screen'))
+  expect(seen.sets).toContainEqual({ key: 'background-color.darkBackground', value: '#020c02' })
+  expect(seen.sets).toContainEqual({ key: 'background-color.darkText', value: '#33ff33' })
+  expect(JSON.stringify(ran)).toContain('#33ff33')
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect((await ui.find({ key: 'dark-text' }))?.props.value).toBe('#33ff33')
+  await ui.press({ key: 'dark-text-auto' })
+  expect(seen.sets).toContainEqual({ key: 'background-color.darkText', value: '' })
+  expect((await ui.find({ key: 'dark-text' }))?.props.value).toBe('')
+  await ui.unmount()
+})
+
+test('a text color from the settings is used', { options: { darkText: '#FFB000' } }, async ($, on) => {
+  engine(on)
+  await $.session.start(start)
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect((await ui.find({ key: 'dark-text' }))?.props.value).toBe('#ffb000')
+  expect((await ui.find({ key: 'light-text' }))?.props.value).toBe('')
+  await ui.unmount()
+})

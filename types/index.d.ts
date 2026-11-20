@@ -4,6 +4,10 @@ export type Applied = {
   light: string
   /** The dark-mode page color painted, six-digit hex. */
   dark: string
+  /** The light-mode text color asked for, six-digit hex; empty when it follows the page. */
+  lightText: string
+  /** The dark-mode text color asked for, six-digit hex; empty when it follows the page. */
+  darkText: string
   /** Whether the mod is painting at all. */
   isEnabled: boolean
   /** Whether an attached client draws themes (false in a terminal). */

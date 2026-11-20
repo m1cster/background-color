@@ -21,6 +21,18 @@
       "title": "Dark mode background",
       "description": "Hex color for the page in dark mode, such as #1b1d22. Leave blank for the mod's default.",
       "default": "#1b1d22"
+    },
+    "lightText": {
+      "type": "string",
+      "title": "Light mode text",
+      "description": "Hex color for text in light mode, such as #1c2c1c. Leave blank for text that follows the background.",
+      "default": ""
+    },
+    "darkText": {
+      "type": "string",
+      "title": "Dark mode text",
+      "description": "Hex color for text in dark mode, such as #33ff33 for an old green monitor. Leave blank for text that follows the background.",
+      "default": ""
     }
   },
   "license": "MIT",

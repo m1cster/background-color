@@ -113,15 +113,15 @@ function lift(hex: string, amount: number): string {
 }
 
 /**
- * A text color in the background's hue that reaches `ratio` against every
- * surface, starting from lightness `start` and walking toward black or white.
+ * A text color in `tint`'s hue and saturation that reaches `ratio` against
+ * every surface, starting from lightness `start` and walking toward black or
+ * white only as far as it must.
  */
-function textFor(surfaces: string[], hue: Hsl, isDarkText: boolean, start: number, ratio: number): string {
-  const s = Math.min(hue.s, 0.22)
+function textFor(surfaces: string[], tint: Hsl, isDarkText: boolean, start: number, ratio: number): string {
   let l = start
 
   for (let i = 0; i <= 100; i++) {
-    const candidate = fromHsl({ h: hue.h, s, l })
+    const candidate = fromHsl({ h: tint.h, s: tint.s, l })
 
     if (surfaces.every(surface => contrast(candidate, surface) >= ratio)) {
       return candidate
@@ -135,26 +135,40 @@ function textFor(surfaces: string[], hue: Hsl, isDarkText: boolean, start: numbe
 /**
  * A mode's gray anchors from its page color: surfaces a few percent lighter
  * than the page (each as light or lighter than the one before, as the design
- * system wants), and three text strengths that clear 7:1 and 4.5:1.
+ * system wants), and three text strengths that clear 7:1, 5.5:1 and 4.5:1.
+ *
+ * Text follows `text` where one is given (a green phosphor, an amber), its
+ * secondary and muted strengths the same hue a step toward the page; else it
+ * is a soft near-black or near-white tinted to the page's hue.
  */
-export function anchorsFor(background: string, mode: Mode): Anchors {
-  const hue = toHsl(background)
+export function anchorsFor(background: string, mode: Mode, text?: string): Anchors {
   // The design system's ramp runs one way per mode: dark text on a light page,
   // light text on a dark one.
   const isDarkText = mode === 'light'
   const steps = mode === 'light' ? [0, 0.015, 0.03] : [0, 0.025, 0.05, 0.075]
   const surfaces = steps.map(step => lift(background, step))
-  // Text starts from a soft tone and darkens (or lightens) only as far as its
-  // contrast needs.
-  const start = (dark: number, light: number) => (isDarkText ? dark : light)
+  let tint: Hsl
+  let starts: [number, number, number]
+
+  if (text === undefined) {
+    const page = toHsl(background)
+    tint = { ...page, s: Math.min(page.s, 0.22) }
+    starts = isDarkText ? [0.14, 0.3, 0.4] : [0.93, 0.8, 0.68]
+  } else {
+    tint = toHsl(text)
+    const l = tint.l
+    // Each weaker strength sits a share of the way from the text toward the page.
+    const page = toHsl(background).l
+    starts = [l, l + (page - l) * 0.25, l + (page - l) * 0.4]
+  }
 
   const anchors: Anchors = {
     'surface-0': surfaces[0]!,
     'surface-1': surfaces[1]!,
     'surface-2': surfaces[2]!,
-    'text-primary': textFor(surfaces, hue, isDarkText, start(0.14, 0.93), 7),
-    'text-secondary': textFor(surfaces, hue, isDarkText, start(0.3, 0.8), 5.5),
-    'text-muted': textFor(surfaces, hue, isDarkText, start(0.4, 0.68), 4.5),
+    'text-primary': textFor(surfaces, tint, isDarkText, starts[0], 7),
+    'text-secondary': textFor(surfaces, tint, isDarkText, starts[1], 5.5),
+    'text-muted': textFor(surfaces, tint, isDarkText, starts[2], 4.5),
   }
 
   if (mode === 'dark') {
