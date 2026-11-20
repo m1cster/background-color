@@ -27,7 +27,7 @@ In the desktop app, where `/plugin` does not run: click + next to the prompt box
 ## Configure it
 
 - **Settings pane:** run `/background-color` to open a pane with a swatch, a hex field and presets for each mode, plus an on/off switch.
-- **Green screen:** `/background-color green-screen`, or the Green screen button in the pane, makes dark mode look like an old monochrome monitor: P1 phosphor green text (`#33ff33`) on a faintly green black (`#020c02`).
+- **Old monitors:** two presets make dark mode look like an old monochrome monitor. `/background-color green-screen` (or the Green screen button in the pane) gives P1 phosphor green text (`#33ff33`) on a faintly green black (`#020c02`); `/background-color amber-screen` (or Amber screen) gives P3 phosphor amber (`#ffb000`) on a faintly amber black (`#0c0700`).
 - **Command:** `/background-color light #f3efe6` and `/background-color dark #1b1d22` set a background; `/background-color dark-text #33ff33` sets a text color and `/background-color dark-text auto` lets text follow the background again (`light-text` likewise); a mode named with no color shows the current one; `/background-color reset`, `/background-color on` and `/background-color off` do what they say.
 - **Plugin settings:** the fields `Light mode background`, `Dark mode background`, `Light mode text`, `Dark mode text` and `Custom background` appear wherever the app lists plugin options, and are stored in `settings.json` under `pluginConfigs["background-color"].options`.
 

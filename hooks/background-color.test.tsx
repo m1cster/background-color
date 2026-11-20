@@ -197,3 +197,20 @@ test('a text color from the settings is used', { options: { darkText: '#FFB000' 
   expect((await ui.find({ key: 'light-text' }))?.props.value).toBe('')
   await ui.unmount()
 })
+
+test('amber-screen paints amber text on a dark amber page', async ($, on) => {
+  const seen = engine(on)
+  await $.session.start(start)
+
+  await $.command.run(run('amber-screen'))
+  expect(seen.sets).toContainEqual({ key: 'background-color.darkBackground', value: '#0c0700' })
+  expect(seen.sets).toContainEqual({ key: 'background-color.darkText', value: '#ffb000' })
+
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  // Painted as asked: Desktop accepts the pair, so nothing is nudged.
+  expect((await ui.find({ key: 'dark-hex' }))?.props.value).toBe('#0c0700')
+  expect((await ui.find({ key: 'dark-text' }))?.props.value).toBe('#ffb000')
+  await ui.press({ key: 'green-screen' })
+  expect((await ui.find({ key: 'dark-text' }))?.props.value).toBe('#33ff33')
+  await ui.unmount()
+})

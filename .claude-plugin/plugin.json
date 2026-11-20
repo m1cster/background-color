@@ -1,6 +1,6 @@
 {
   "name": "background-color",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Sets Claude's background color for light mode and dark mode, with cards, panels and text tuned to match.",
   "types": "./types/index.d.ts",
   "userConfig": {

@@ -39,8 +39,15 @@ const TEXT_FIELD: Record<Mode, 'lightText' | 'darkText'> = {
   dark: 'darkText',
 }
 
-/** An old monochrome monitor: P1 phosphor green on a faintly green black. */
-const GREEN_SCREEN = { background: '#020c02', text: '#33ff33' }
+/** Old monochrome monitors, for dark mode: phosphor text on a faintly tinted black. */
+const SCREENS = {
+  /** P1 phosphor green. */
+  green: { label: 'Green screen', background: '#020c02', text: '#33ff33' },
+  /** P3 phosphor amber. */
+  amber: { label: 'Amber screen', background: '#0c0700', text: '#ffb000' },
+} as const
+
+type Screen = keyof typeof SCREENS
 
 // Change the tag when Applied's fields change: it declines what an earlier
 // version stored, which outlives a reload.
@@ -293,7 +300,7 @@ async function setText($: EngineInterface, mode: Mode, input: string): Promise<s
     const hex = isAuto ? '' : normalizeHex(input)
 
     if (hex === undefined) {
-      return refuse($, `"${input}" isn't a hex color. Try one like ${GREEN_SCREEN.text}, or auto.`)
+      return refuse($, `"${input}" isn't a hex color. Try one like ${SCREENS.green.text}, or auto.`)
     }
     const deny = await setOption($, TEXT_FIELD[mode], hex)
 
@@ -332,6 +339,7 @@ const HELP = [
   '  /background-color dark-text #33ff33  set the dark mode text color',
   '  /background-color dark-text auto  text follows the page color again',
   '  /background-color green-screen    dark mode as an old green monitor',
+  '  /background-color amber-screen    dark mode as an old amber monitor',
   '  /background-color reset           both back to the defaults',
   '  /background-color on | off        paint the custom background, or not',
 ].join('\n')
@@ -343,7 +351,7 @@ export const register: Register = (on, options) => {
     await $.command.register({
       name: 'background-color',
       description: 'Set the background color for light and dark mode',
-      argumentHint: '[light|dark|light-text|dark-text <#hex> | green-screen | reset | on | off]',
+      argumentHint: '[light|dark|light-text|dark-text <#hex> | green-screen | amber-screen | reset | on | off]',
     })
     await apply($, options, false)
 
@@ -390,9 +398,11 @@ export const register: Register = (on, options) => {
 
         return { text: await setText($, mode, value) }
       }
-      case 'green-screen': {
-        const background = await setColor($, 'dark', GREEN_SCREEN.background)
-        const text = await setText($, 'dark', GREEN_SCREEN.text)
+      case 'green-screen':
+      case 'amber-screen': {
+        const screen = SCREENS[verb.toLowerCase() === 'green-screen' ? 'green' : 'amber']
+        const background = await setColor($, 'dark', screen.background)
+        const text = await setText($, 'dark', screen.text)
 
         return { text: `${background}\n${text}` }
       }
@@ -455,17 +465,22 @@ export const register: Register = (on, options) => {
             onSubmit={value => void setText($, mode, value)}
           />
           <Button key={`${mode}-text-auto`} dimColor label="Auto" onPress={() => void setText($, mode, '')} />
-          {mode === 'dark' && (
-            <Button
-              key="green-screen"
-              label="Green screen"
-              variant={now.dark === GREEN_SCREEN.background && now.darkText === GREEN_SCREEN.text ? 'primary' : 'secondary'}
-              onPress={() => {
-                void setColor($, 'dark', GREEN_SCREEN.background)
-                void setText($, 'dark', GREEN_SCREEN.text)
-              }}
-            />
-          )}
+          {mode === 'dark' &&
+            (Object.keys(SCREENS) as Screen[]).map(name => {
+              const screen = SCREENS[name]
+
+              return (
+                <Button
+                  key={`${name}-screen`}
+                  label={screen.label}
+                  variant={now.dark === screen.background && now.darkText === screen.text ? 'primary' : 'secondary'}
+                  onPress={() => {
+                    void setColor($, 'dark', screen.background)
+                    void setText($, 'dark', screen.text)
+                  }}
+                />
+              )
+            })}
         </Box>
       </Box>
     )
