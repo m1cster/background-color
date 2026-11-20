@@ -1,0 +1,13 @@
+{
+  "name": "background-color",
+  "owner": {
+    "name": "Michael Thurston"
+  },
+  "description": "Set Claude's background color for light and dark mode, to tell several Claude licenses apart.",
+  "plugins": [
+    {
+      "name": "background-color",
+      "source": "./"
+    }
+  ]
+}

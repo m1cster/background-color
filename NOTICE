@@ -1,0 +1,9 @@
+Third-party files
+
+hooks/make-colors.js and hooks/make-colors.d.ts are copied unchanged from
+Claude Code's plugin-authoring tools, which tell mod authors to include them in
+their mods. They are generated from Anthropic's design system and are copyright
+Anthropic. They are not covered by this project's MIT license; their use is
+subject to Anthropic's terms for Claude Code.
+
+All other files in this project are under the MIT license in LICENSE.

@@ -1,0 +1,30 @@
+{
+  "name": "background-color",
+  "version": "0.0.1",
+  "description": "Sets Claude's background color for light mode and dark mode, with cards, panels and text tuned to match.",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "enabled": {
+      "type": "boolean",
+      "title": "Custom background",
+      "description": "Paint the background colors below. Off leaves the app's own look.",
+      "default": true
+    },
+    "lightBackground": {
+      "type": "string",
+      "title": "Light mode background",
+      "description": "Hex color for the page in light mode, such as #f3efe6. Leave blank for the mod's default.",
+      "default": "#f3efe6"
+    },
+    "darkBackground": {
+      "type": "string",
+      "title": "Dark mode background",
+      "description": "Hex color for the page in dark mode, such as #1b1d22. Leave blank for the mod's default.",
+      "default": "#1b1d22"
+    }
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Michael Thurston"
+  }
+}
